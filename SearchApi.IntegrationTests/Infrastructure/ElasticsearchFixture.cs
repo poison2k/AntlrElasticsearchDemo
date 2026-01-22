@@ -11,7 +11,7 @@ public sealed class ElasticsearchFixture
     public ElasticsearchFixture()
     {
         
-        DockerImage image = new("cr.rt.coi.air:443/elastic/elasticsearch:9.1.0"); 
+        DockerImage image = new("docker.elastic.co/elasticsearch/elasticsearch:9.2.4"); 
    
         Container = new ElasticsearchBuilder(image)
             .WithCleanUp(true)
