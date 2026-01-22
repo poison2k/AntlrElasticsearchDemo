@@ -6,87 +6,79 @@ using Microsoft.Extensions.Options;
 using Elastic.Transport;
 using SearchApi.Models;
 
-
-
 namespace SearchApi.Elastic;
+
+using System.Text;
 
 public sealed class ElasticsearchService
 {
-    private readonly ElasticsearchClient _client;
-    private readonly string _defaultIndex;
-
     public ElasticsearchService(IOptions<ElasticsearchConfig> options)
     {
-        var cfg = options.Value;
-        _defaultIndex = cfg.DefaultIndex;
+        ElasticsearchConfig cfg = options.Value;
+        String defaultIndex = cfg.DefaultIndex;
 
-        ElasticsearchClientSettings settings;
-
-        if (!string.IsNullOrWhiteSpace(cfg.CloudId))
+        Uri node;
+        if (!String.IsNullOrWhiteSpace(cfg.CloudId))
         {
-            var node = new Uri(string.IsNullOrWhiteSpace(cfg.NodeUri)
-                ? "https://localhost:9200"
-                : cfg.NodeUri);
-
-            settings = new ElasticsearchClientSettings(node)
-                .Authentication(new BasicAuthentication(cfg.Username, cfg.Password))
-                .DefaultIndex(_defaultIndex)
-                .ServerCertificateValidationCallback((_, _, _, _) => true); // nur dev
-
+            node = new Uri(cfg.CloudId);
+        }
+        else if (!String.IsNullOrWhiteSpace(cfg.NodeUri))
+        {
+            node = new Uri(cfg.NodeUri);
         }
         else
         {
-            var node = new Uri(string.IsNullOrWhiteSpace(cfg.NodeUri)
-                ? "https://localhost:9200"
-                : cfg.NodeUri);                  // ✅ String → Uri
-
-            settings = new ElasticsearchClientSettings(node)
-                .Authentication(new BasicAuthentication(cfg.Username, cfg.Password))
-                .DefaultIndex(_defaultIndex)
-                .ServerCertificateValidationCallback((_, _, _, _) => true); // nur dev
+            node = new Uri($"https://localhost:9200");
         }
+        
+        ElasticsearchClientSettings settings = new ElasticsearchClientSettings(node)
+            .Authentication(new BasicAuthentication(cfg.Username, cfg.Password))
+            .DefaultIndex(defaultIndex)
+            .ServerCertificateValidationCallback((_, _, _, _) => true) 
+            .EnableDebugMode(details =>
+            {
+                if (details.RequestBodyInBytes == null) return;
+                Console.WriteLine("=== ES Request ===");
+                Console.WriteLine(Encoding.UTF8.GetString(details.RequestBodyInBytes));
+            }); 
 
-        _client = new ElasticsearchClient(settings);
+        Client = new ElasticsearchClient(settings);
     }
 
+    public ElasticsearchClient Client { get; }
 
-    public ElasticsearchClient Client => _client;
-
-    public async Task<bool> EnsureIndexAsync(string indexName)
+    public async Task<Boolean> EnsureIndexAsync(String indexName)
     {
-        var exists = await _client.Indices.ExistsAsync(indexName);
+        EsIdx.ExistsResponse exists = await Client.Indices.ExistsAsync(indexName);
         if (exists.Exists) return true;
 
-        var req = new EsIdx.CreateIndexRequest(indexName)
+        EsIdx.CreateIndexRequest req = new (indexName)
         {
             Settings = new IndexSettings
             {
                 NumberOfShards = 1,
-                NumberOfReplicas = 0
-            }
-            // Mappings lassen wir für den Moment weg
+                NumberOfReplicas = 0,
+            },
         };
 
-        var create = await _client.Indices.CreateAsync(req);
+        CreateIndexResponse create = await Client.Indices.CreateAsync(req);
         return create.IsSuccess();
     }
 
-
-    public async Task IndexManyAsync(string indexName, IEnumerable<Document> docs)
+    public async Task IndexManyAsync(String indexName, IEnumerable<Document> docs)
     {
-        var bulk = new BulkRequest(indexName)
+        BulkRequest bulk = new (indexName)
         {
             Refresh = Refresh.WaitFor,
-            Operations = new List<IBulkOperation>()
+            Operations = new List<IBulkOperation>(),
         };
 
-        foreach (var d in docs)
+        foreach (Document d in docs)
             bulk.Operations.Add(new BulkIndexOperation<Document>(d) { Id = d.Id });
 
-        var response = await _client.BulkAsync(bulk);
+        BulkResponse response = await Client.BulkAsync(bulk);
 
         if (!response.IsSuccess())
             throw new InvalidOperationException(response.ElasticsearchServerError?.ToString() ?? "Bulk failed");
     }
-
 }

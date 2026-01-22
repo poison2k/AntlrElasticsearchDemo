@@ -6,15 +6,26 @@
         <InvariantGlobalization>true</InvariantGlobalization>
     </PropertyGroup>
 
+    <PropertyGroup>
+        <Antlr4JavaOptions>
+            -Dhttp.proxyHost=158.32.162.190
+            -Dhttp.proxyPort=80
+            -Dhttps.proxyHost=158.32.162.190
+            -Dhttps.proxyUser=sebastianbuenck
+            -Dhttps.proxyPassword=Sara1985
+            -Dhttp.proxyUser=sebastianbuenck
+            -Dhttp.proxyPassword=Sara1985
+        </Antlr4JavaOptions>
+    </PropertyGroup>
 
     <ItemGroup>
         <!-- Generiert Parser/Visitor zur Buildzeit -->
-        <PackageReference Include="Antlr4BuildTasks" Version="12.1.0" PrivateAssets="all" />
+        <PackageReference Include="Antlr4BuildTasks" Version="12.11.0" PrivateAssets="all" />
         <PackageReference Include="Antlr4.Runtime.Standard" Version="4.13.1" />
 
 
         <!-- Offizieller Elasticsearch .NET Client (v9.x zur ES 9.x) -->
-        <PackageReference Include="Elastic.Clients.Elasticsearch" Version="9.*" />
+        <PackageReference Include="Elastic.Clients.Elasticsearch" Version="8.19.13" />
 
 
         <!-- Für JSON und minimalen Logging-Output -->

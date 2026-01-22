@@ -3,7 +3,7 @@
 
 public sealed class SearchRequest
 {
-    public string? Index { get; set; }
-    public string Query { get; set; } = string.Empty; // z.B. "TEST AND CHILD Or Good"
-    public int Size { get; set; } = 10;
+    public String? Index { get; set; }
+    public String Query { get; set; } = String.Empty; // z.B. "TEST AND CHILD Or Good"
+    public Int32 Size { get; set; } = 100;
 }

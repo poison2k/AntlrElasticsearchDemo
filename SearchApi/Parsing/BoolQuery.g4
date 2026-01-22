@@ -1,30 +1,41 @@
 ﻿grammar BoolQuery;
 
-query: expr EOF;
+query: orExpr EOF;
 
-expr
-: expr OR term # OrExpr
-| expr AND term # AndExpr
-| term # ToTerm
-;
+orExpr 
+    : andExpr  (OR andExpr)*;
+
+andExpr
+    : term (AND term)*;
 
 term
-: NOT? factor # NotTerm
-;
+    : NOT? factor;
 
 factor
-: WORD # Word
-| LPAREN expr RPAREN # Paren
-;
+    : WORD
+    | PHRASE
+    | nearCall
+    | LPAREN orExpr RPAREN ;
 
+nearCall
+    : NEAR LPAREN factor COMMA factor (SEMI NUMBER)? RPAREN;
+    
 AND: A N D; // case-insensitive via Lexer-Regeln unten
 OR : O R;
 NOT: N O T;
 
+NEAR: N E A R;
+
+// Token
 LPAREN: '(';
 RPAREN: ')';
+COMMA: ',';
+SEMI: ';';
 
-WORD: [\p{L}\p{N}_\-]+; // Worte/Token
+NUMBER: [0-9]+;
+
+PHRASE: '"' (~["\\\r\n])* '"' ;
+WORD: [\p{L}\p{N}_\-]+;
 WS: [ \t\r\n]+ -> skip;
 
 fragment A: [aA];
@@ -33,3 +44,4 @@ fragment D: [dD];
 fragment O: [oO];
 fragment R: [rR];
 fragment T: [tT];
+fragment E: [eE];

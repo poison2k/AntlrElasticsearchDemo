@@ -2,9 +2,9 @@
 
 public sealed class ElasticsearchConfig
 {
-    public string? CloudId { get; set; }
-    public string? NodeUri { get; set; }
-    public string Username { get; set; } = "elastic";
-    public string Password { get; set; } = "changeme";
-    public string DefaultIndex { get; set; } = "documents";
+    public String? CloudId { get; set; }
+    public String? NodeUri { get; set; }
+    public String Username { get; set; } = "elastic";
+    public String Password { get; set; } = "changeme";
+    public String DefaultIndex { get; set; } = "documents";
 }

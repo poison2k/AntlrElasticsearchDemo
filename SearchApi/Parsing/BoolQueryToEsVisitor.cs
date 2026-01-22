@@ -1,89 +1,146 @@
-﻿using Elastic.Clients.Elasticsearch;
-using Elastic.Clients.Elasticsearch.QueryDsl;
+﻿using Elastic.Clients.Elasticsearch.QueryDsl;
 using Antlr4.Runtime;
-using Antlr4.Runtime.Tree;
 
 namespace SearchApi.Parsing;
 
+using global::Elastic.Clients.Elasticsearch;
+
 public static class BoolParser
 {
-    public static Node Parse(string input)
+    public static INode Parse(String input)
     {
-        var inputStream = new AntlrInputStream(input);
-        var lexer = new BoolQueryLexer(inputStream);
-        var tokens = new CommonTokenStream(lexer);
-        var parser = new BoolQueryParser(tokens);
+        AntlrInputStream inputStream = new(input);
+        BoolQueryLexer lexer = new(inputStream);
+        CommonTokenStream tokens = new(lexer);
+        BoolQueryParser parser = new(tokens);
 
         parser.RemoveErrorListeners();
-        parser.ErrorHandler = new BailErrorStrategy(); 
+        parser.ErrorHandler = new BailErrorStrategy();
 
-        var tree = parser.query();
-        return new AstBuilderVisitor().Visit(tree);
+        BoolQueryParser.QueryContext? tree = parser.query();
+        return new AstBuilderVisitor().Visit(tree.orExpr());
     }
 }
 
-
-internal sealed class AstBuilderVisitor : BoolQueryBaseVisitor<Node>
+internal class AstBuilderVisitor : BoolQueryBaseVisitor<INode>
 {
-    public override Node VisitWord(BoolQueryParser.WordContext context)
-        => new WordNode(context.WORD().GetText());
-
-    public override Node VisitNotTerm(BoolQueryParser.NotTermContext context)
+    public override INode VisitOrExpr(BoolQueryParser.OrExprContext context)
     {
-        var factor = context.factor();
-        var node = Visit(factor);
+        List<INode> items =
+        [
+            Visit(context.andExpr(0)),
+        ];
+        for (Int32 i = 1; i < context.andExpr().Length; i++)
+            items.Add(Visit(context.andExpr(i)));
+        return items.Count == 1 ? items[0] : new OrNode(items);
+    }
+
+    public override INode VisitAndExpr(BoolQueryParser.AndExprContext context)
+    {
+        List<INode> items = [Visit(context.term(0))];
+        for (Int32 i = 1; i < context.term().Length; i++)
+            items.Add(Visit(context.term(i)));
+        return items.Count == 1 ? items[0] : new AndNode(items);
+    }
+
+    public override INode VisitTerm(BoolQueryParser.TermContext context)
+    {
+        INode? node = Visit(context.factor());
         return context.NOT() != null ? new NotNode(node) : node;
     }
 
-    public override Node VisitAndExpr(BoolQueryParser.AndExprContext context)
-        => new AndNode(Visit(context.expr()), Visit(context.term()));
+    public override INode VisitFactor(BoolQueryParser.FactorContext context)
+    {
+        if (context.PHRASE() != null)
+        {
+            String? raw = context.PHRASE().GetText();
+            String text = raw.Substring(1, raw.Length - 2);
+            return new PhraseNode(text);
+        }
 
-    public override Node VisitOrExpr(BoolQueryParser.OrExprContext context)
-        => new OrNode(Visit(context.expr()), Visit(context.term()));
+        if (context.WORD() != null)
+        {
+            return new WordNode(context.WORD().GetText());
+        }
 
-    public override Node VisitToTerm(BoolQueryParser.ToTermContext context)
-        => Visit(context.term());
+        if (context.nearCall() != null)
+        {
+            return Visit(context.nearCall());
+        }
 
-    public override Node VisitParen(BoolQueryParser.ParenContext context)
-        => Visit(context.expr());
+        return Visit(context.orExpr());
+    }
+
+    public override INode VisitNearCall(BoolQueryParser.NearCallContext context)
+    {
+        INode? left = Visit(context.factor(0));
+        INode? right = Visit(context.factor(1));
+
+        Int32 slop = 5;
+        if (context.NUMBER() != null)
+        {
+            slop = Int32.Parse(context.NUMBER().GetText());
+        }
+
+        return new NearNode(left, right, slop);
+    }
 }
 
 public static class EsQueryBuilder
 {
-    private const string DefaultField = "content";
+    private static readonly Field[] _fields =
+    [
+        new("title"),
+        new("description"),
+        new("text"),
+    ];
 
-    public static Query ToEsQuery(Node node) =>
+    public static Query ToEsQuery(INode node) =>
         node switch
         {
-            WordNode w => new MatchQuery
+            PhraseNode p => new MatchPhraseQuery()
             {
-                Field = DefaultField,   // required!
-                Query = w.Text
+                Field = "text",
+                Query = p.Text,
+            },
+
+            WordNode w => new MultiMatchQuery
+            {
+                Query = w.Text,
+                Fields = _fields,
+                Type = TextQueryType.BestFields,
+            },
+
+            OrNode o => new BoolQuery()
+            {
+                Should = o.Items.Select(ToEsQuery).ToList(),
+                MinimumShouldMatch = 1,
+            },
+
+            AndNode a => new BoolQuery()
+            {
+                Must = a.Items.Select(ToEsQuery).ToList(),
             },
 
             NotNode n => new BoolQuery
             {
-                MustNot = new List<Query> { ToEsQuery(n.Inner) }
+                MustNot = new List<Query> {ToEsQuery(n.Inner)},
             },
 
-            AndNode a => MergeBool(a.Left, a.Right, and: true),
-            OrNode  o => MergeBool(o.Left, o.Right, and: false),
+            NearNode n => new MatchPhraseQuery
+            {
+                Field = "text",
+                Query = $"{ExtractText(n.Left)}, {ExtractText(n.Right)}",
+                Slop = n.Slop,
+            },
 
-            _ => new MatchAllQuery()
+            var _ => new MatchAllQuery(),
         };
 
-    private static Query MergeBool(Node left, Node right, bool and)
+    private static String ExtractText(INode node) => node switch
     {
-        var l = ToEsQuery(left);
-        var r = ToEsQuery(right);
-
-        if (and)
-            return new BoolQuery { Must = new List<Query> { l, r } };
-
-        return new BoolQuery
-        {
-            Should = new List<Query> { l, r },
-            MinimumShouldMatch = 1
-        };
-    }
+        WordNode w => w.Text,
+        PhraseNode p => p.Text,
+        var _ => throw new InvalidOperationException("Near() erlaubt aktuell nur WORD oder PHRASE als Argument."),
+    };
 }
