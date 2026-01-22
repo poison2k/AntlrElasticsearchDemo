@@ -26,9 +26,5 @@ public sealed class AdminController(ElasticsearchService es) : ControllerBase
         return Ok(new { indexed = body.Docs.Length });
     }
     
-    public sealed class SeedBody(String? index)
-    {
-        public String? Index { get; } = index;
-        public Document[] Docs { get; init; } = [];
-    }
+   
 }

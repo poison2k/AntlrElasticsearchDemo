@@ -1,5 +1,7 @@
 ﻿namespace SearchApi.Parsing;
 
+using SearchApi.Parsing.Interfaces;
+
 public static class AbstractSyntaxTreeDebug
 {
     public static String Dump(INode n) => n

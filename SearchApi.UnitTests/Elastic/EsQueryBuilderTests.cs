@@ -4,6 +4,7 @@ using System.Reflection.Metadata;
 using FluentAssertions;
 using global::Elastic.Clients.Elasticsearch.QueryDsl;
 using SearchApi.Parsing;
+using SearchApi.Parsing.Interfaces;
 using SearchApi.UnitTests.TestUtils;
 
 public class EsQueryBuilderTests

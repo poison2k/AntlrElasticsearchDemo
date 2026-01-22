@@ -25,5 +25,18 @@
       <None Update="Features\**\*.feature">
           <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
+      <None Remove="bin\**" />
+  </ItemGroup>
+    
+  <ItemGroup>
+    <ReqnrollFeatureFile Remove="bin\**" />
+  </ItemGroup>
+    
+  <ItemGroup>
+    <Compile Remove="bin\**" />
+  </ItemGroup>
+    
+  <ItemGroup>
+    <EmbeddedResource Remove="bin\**" />
   </ItemGroup>
 </Project>

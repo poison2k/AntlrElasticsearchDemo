@@ -2,5 +2,5 @@
 
 public sealed class CreateIndexRequest
 {
-    public string Name { get; set; } = "documents";
+    public String Name { get; set; } = "documents";
 }

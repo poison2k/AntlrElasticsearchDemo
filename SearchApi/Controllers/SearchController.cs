@@ -11,6 +11,7 @@ using SearchApi.Parsing;
 namespace SearchApi.Controllers;
 
 using Ecs.QueryDsl;
+using SearchApi.Parsing.Interfaces;
 
 [ApiController]
 [Route("api/[controller]")]

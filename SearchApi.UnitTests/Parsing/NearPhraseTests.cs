@@ -2,6 +2,7 @@
 
 using FluentAssertions;
 using SearchApi.Parsing;
+using SearchApi.Parsing.Interfaces;
 
 public class NearPhraseTests
 {

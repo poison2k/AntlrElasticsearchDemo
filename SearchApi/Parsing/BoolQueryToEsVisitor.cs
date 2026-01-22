@@ -4,6 +4,7 @@ using Antlr4.Runtime;
 namespace SearchApi.Parsing;
 
 using global::Elastic.Clients.Elasticsearch;
+using SearchApi.Parsing.Interfaces;
 
 public static class BoolParser
 {
