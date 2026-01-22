@@ -1,8 +1,0 @@
-D:/Workspace/AntlrElasticsearchDemo/SearchApi/obj/Debug/net9.0/BoolQuery.interp
-D:/Workspace/AntlrElasticsearchDemo/SearchApi/obj/Debug/net9.0/BoolQuery.tokens
-D:/Workspace/AntlrElasticsearchDemo/SearchApi/obj/Debug/net9.0/BoolQueryBaseVisitor.cs
-D:/Workspace/AntlrElasticsearchDemo/SearchApi/obj/Debug/net9.0/BoolQueryLexer.cs
-D:/Workspace/AntlrElasticsearchDemo/SearchApi/obj/Debug/net9.0/BoolQueryLexer.interp
-D:/Workspace/AntlrElasticsearchDemo/SearchApi/obj/Debug/net9.0/BoolQueryLexer.tokens
-D:/Workspace/AntlrElasticsearchDemo/SearchApi/obj/Debug/net9.0/BoolQueryParser.cs
-D:/Workspace/AntlrElasticsearchDemo/SearchApi/obj/Debug/net9.0/BoolQueryVisitor.cs
